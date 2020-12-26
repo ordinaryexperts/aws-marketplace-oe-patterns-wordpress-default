@@ -119,3 +119,9 @@ RUN mkdir -p /usr/src; \
 	make clean; \    
     pecl update-channels; \
     rm -rf /tmp/pear ~/.pearrc;
+
+COPY apache2-foreground /usr/local/bin/
+WORKDIR /var/www/html
+
+EXPOSE 80
+CMD ["apache2-foreground"]
