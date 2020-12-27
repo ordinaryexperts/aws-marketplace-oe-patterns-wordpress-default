@@ -7,21 +7,22 @@ services:
       - db_data:/var/lib/mysql
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: somewordpress
-      MYSQL_DATABASE: wordpress
-      MYSQL_USER: wordpress
-      MYSQL_PASSWORD: wordpress
+      - MYSQL_DATABASE=wordpress
+      - MYSQL_PASSWORD=wordpress
+      - MYSQL_ROOT_PASSWORD=somewordpress
+      - MYSQL_USER=wordpress
   wordpress:
     build: .
     volumes:
       - .:/var/www/html
     environment:
-      - AWS_ACCESS_KEY_ID
-      - AWS_DEFAULT_REGION
-      - AWS_REGION
-      - AWS_SECRET_ACCESS_KEY
-      - AWS_SESSION_TOKEN
-      - USER
+      - DB_HOST=db
+      - DB_NAME=wordpress
+      - DB_PASSWORD=wordpress
+      - DB_USER=wordpress
+      - WP_ENV=development
+      - WP_HOME=http://localhost:8080
+      - WP_SITEURL=http://localhost:8080/wp
     ports:
       - "8080:80"
 volumes:

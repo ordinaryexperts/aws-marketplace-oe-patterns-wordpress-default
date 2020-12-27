@@ -144,6 +144,7 @@ RUN mkdir -p /usr/src; \
 		--with-pdo-sqlite=/usr \
 		--with-sqlite3=/usr \
 		--with-curl \
+        --with-mysqli \
 		--with-libedit \
 		--with-openssl \
 		--with-zlib \
@@ -188,9 +189,8 @@ RUN rm -rvf /var/www/html/* && a2dissite 000-default
 
 # composer
 RUN curl -sS https://getcomposer.org/installer -o /tmp/composer-setup.php
-RUN php /tmp/composer-setup.php --install-dir=/usr/local/bin --filename=compose
+RUN php /tmp/composer-setup.php --install-dir=/usr/local/bin --filename=composer
 RUN rm /tmp/composer-setup.php
-RUN ln -s /usr/local/bin/compose /usr/local/bin/composer
 
 COPY apache2-foreground /usr/local/bin/
 WORKDIR /var/www/html
