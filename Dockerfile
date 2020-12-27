@@ -14,8 +14,6 @@ ENV PHP_INI_DIR /usr/local/etc/php
 RUN mkdir -p "$PHP_INI_DIR/conf.d"
 
 RUN apt-get update && apt-get install -q -y --no-install-recommends \
-    apache2                  \
-    apache2-dev              \
     autoconf                 \
     ca-certificates          \
     curl                     \
@@ -54,11 +52,52 @@ RUN apt-get update && apt-get install -q -y --no-install-recommends \
     zlib1g-dev               \
     && rm -rf /var/lib/apt/lists/*
 
-
-RUN a2dismod mpm_event && a2enmod mpm_prefork
+RUN set -eux; \
+	mkdir -p "$PHP_INI_DIR/conf.d"; \
+# allow running as an arbitrary user (https://github.com/docker-library/php/issues/743)
+	[ ! -d /var/www/html ]; \
+	mkdir -p /var/www/html; \
+	chown www-data:www-data /var/www/html; \
+	chmod 777 /var/www/html
 
 ENV APACHE_CONFDIR /etc/apache2
 ENV APACHE_ENVVARS $APACHE_CONFDIR/envvars
+
+RUN set -eux; \
+	apt-get update; \
+	apt-get install -y --no-install-recommends apache2 apache2-dev; \
+	rm -rf /var/lib/apt/lists/*; \
+	\
+# generically convert lines like
+#   export APACHE_RUN_USER=www-data
+# into
+#   : ${APACHE_RUN_USER:=www-data}
+#   export APACHE_RUN_USER
+# so that they can be overridden at runtime ("-e APACHE_RUN_USER=...")
+	sed -ri 's/^export ([^=]+)=(.*)$/: ${\1:=\2}\nexport \1/' "$APACHE_ENVVARS"; \
+	\
+# setup directories and permissions
+	. "$APACHE_ENVVARS"; \
+	for dir in \
+		"$APACHE_LOCK_DIR" \
+		"$APACHE_RUN_DIR" \
+		"$APACHE_LOG_DIR" \
+	; do \
+		rm -rvf "$dir"; \
+		mkdir -p "$dir"; \
+		chown "$APACHE_RUN_USER:$APACHE_RUN_GROUP" "$dir"; \
+# allow running as an arbitrary user (https://github.com/docker-library/php/issues/743)
+		chmod 777 "$dir"; \
+	done; \
+	\
+# logs should go to stdout / stderr
+	ln -sfT /dev/stderr "$APACHE_LOG_DIR/error.log"; \
+	ln -sfT /dev/stdout "$APACHE_LOG_DIR/access.log"; \
+	ln -sfT /dev/stdout "$APACHE_LOG_DIR/other_vhosts_access.log"; \
+	chown -R --no-dereference "$APACHE_RUN_USER:$APACHE_RUN_GROUP" "$APACHE_LOG_DIR"
+
+# Apache + PHP requires preforking Apache for best results
+RUN a2dismod mpm_event && a2enmod mpm_prefork
 
 # PHP files should be handled by PHP, and should be preferred over any other file type
 RUN { \
@@ -116,9 +155,42 @@ RUN mkdir -p /usr/src; \
 	find -type f -name '*.a' -delete; \
 	make install; \
 	find /usr/local/bin /usr/local/sbin -type f -executable -exec strip --strip-all '{}' + || true; \
+    cp -v php.ini-* "$PHP_INI_DIR/"; \
+    cp php.ini-development "$PHP_INI_DIR/conf.d/php.ini"; \
 	make clean; \    
     pecl update-channels; \
     rm -rf /tmp/pear ~/.pearrc;
+
+# https://roots.io/docs/bedrock/master/server-configuration/#apache-configuration-for-bedrock
+RUN { \
+    echo '<VirtualHost *:80>'; \
+    echo '\tDocumentRoot /var/www/html/bedrock/web'; \
+    echo '\tDirectoryIndex index.php index.html index.htm'; \
+    echo '\t<Directory /var/www/html/bedrock/web>'; \
+    echo '\t\tOptions -Indexes'; \
+    echo; \
+    echo '\t\t# .htaccess is not required if you include this'; \
+    echo '\t\t<IfModule mod_rewrite.c>'; \
+    echo '\t\t\tRewriteEngine On'; \
+    echo '\t\t\tRewriteBase /'; \
+    echo '\t\t\tRewriteRule ^index.php$ - [L]'; \
+    echo '\t\t\tRewriteCond %{REQUEST_FILENAME} !-f'; \
+    echo '\t\t\tRewriteCond %{REQUEST_FILENAME} !-d'; \
+    echo '\t\t\tRewriteRule . /index.php [L]'; \
+    echo '\t\t</IfModule>'; \
+    echo '\t</Directory>'; \
+    echo '</VirtualHost>'; \
+  } | tee "$APACHE_CONFDIR/sites-available/wordpress.conf" \
+  && a2ensite wordpress
+
+# remove default site
+RUN rm -rvf /var/www/html/* && a2dissite 000-default
+
+# composer
+RUN curl -sS https://getcomposer.org/installer -o /tmp/composer-setup.php
+RUN php /tmp/composer-setup.php --install-dir=/usr/local/bin --filename=compose
+RUN rm /tmp/composer-setup.php
+RUN ln -s /usr/local/bin/compose /usr/local/bin/composer
 
 COPY apache2-foreground /usr/local/bin/
 WORKDIR /var/www/html
