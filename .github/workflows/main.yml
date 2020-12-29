@@ -36,5 +36,5 @@ jobs:
       run: |
         export AWS_S3_DROP_PATH_ZIP=aws-marketplace-oe-patterns-wordpress-default/$GITHUB_REF.zip
         aws s3 cp $HOME/aws-marketplace-oe-patterns-wordpress-default.zip \
-        s3://ordinary-experts-aws-marketplace-drupal-pattern-artifacts/$AWS_S3_DROP_PATH_ZIP \
+        s3://ordinary-experts-aws-marketplace-wordpress-pattern-artifacts/$AWS_S3_DROP_PATH_ZIP \
         --acl public-read
