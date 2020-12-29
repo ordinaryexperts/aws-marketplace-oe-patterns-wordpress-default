@@ -1,0 +1,40 @@
+# Workflow to compress code and upload to AWS S3 drop location
+
+name: AWS Patterns Ordinary Experts Patterns WordPress Default Site
+
+on:
+  push:
+    branches: [ master, develop, 'feature/*' ]
+    tags: [ '*' ]
+  pull_request:
+    branches: [ master, develop, 'feature/*' ]
+    tags: [ '*' ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Compress code archive
+      run: |
+        zip -y -r $HOME/aws-marketplace-oe-patterns-wordpress-default.zip . -x '.git'
+      working-directory: ${{ github.workspace }}
+
+    - name: Install aws-cli
+      run: |
+        curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+        unzip awscliv2.zip
+        sudo ./aws/install
+
+    - name: Deploy archive to AWS S3 drop location
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.OE_PATTERNS_S3_DEV_GITHUB_AWS_ACCESS_KEY_ID }}
+        AWS_DEFAULT_REGION: us-east-1
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.OE_PATTERNS_S3_DEV_GITHUB_AWS_SECRET_ACCESS_KEY }}
+      run: |
+        export AWS_S3_DROP_PATH_ZIP=aws-marketplace-oe-patterns-wordpress-default/$GITHUB_REF.zip
+        aws s3 cp $HOME/aws-marketplace-oe-patterns-wordpress-default.zip \
+        s3://ordinary-experts-aws-marketplace-drupal-pattern-artifacts/$AWS_S3_DROP_PATH_ZIP \
+        --acl public-read
