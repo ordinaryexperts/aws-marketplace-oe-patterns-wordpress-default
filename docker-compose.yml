@@ -14,7 +14,7 @@ services:
   wordpress:
     build: .
     volumes:
-      - .:/var/www/html
+      - .:/var/www/app
     environment:
       - DB_HOST=db
       - DB_NAME=wordpress

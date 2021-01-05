@@ -1,5 +1,5 @@
 bash: build
-	docker-compose run -w /var/www/html --service-ports --rm wordpress bash
+	docker-compose run -w /var/www/app --service-ports --rm wordpress bash
 
 build:
 	docker-compose build wordpress
