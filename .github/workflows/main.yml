@@ -19,7 +19,7 @@ jobs:
 
     - name: Compress code archive
       run: |
-        zip -y -r $HOME/aws-marketplace-oe-patterns-wordpress-default.zip . -x '.git'
+        zip -y -r $HOME/aws-marketplace-oe-patterns-wordpress-default.zip . -x '*/.git/*' -x '/.github/*'
       working-directory: ${{ github.workspace }}
 
     - name: Install aws-cli
