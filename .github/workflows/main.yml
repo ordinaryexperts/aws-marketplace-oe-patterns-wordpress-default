@@ -1,0 +1,46 @@
+# Workflow to compress code and upload to AWS S3 drop location
+
+name: AWS Patterns Ordinary Experts Patterns WordPress Default Site
+
+on:
+  push:
+    branches: [ master, develop, 'feature/*' ]
+    tags: [ '*' ]
+  pull_request:
+    branches: [ master, develop, 'feature/*' ]
+    tags: [ '*' ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Compress code archive
+      run: |
+        zip -y -r $HOME/aws-marketplace-oe-patterns-wordpress-default.zip . -x '/.git/*' -x '/.github/*'
+      working-directory: ${{ github.workspace }}
+
+    - name: Deploy archive to AWS S3 drop location
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.OE_PATTERNS_S3_DEV_GITHUB_AWS_ACCESS_KEY_ID }}
+        AWS_DEFAULT_REGION: us-east-1
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.OE_PATTERNS_S3_DEV_GITHUB_AWS_SECRET_ACCESS_KEY }}
+      run: |
+        # https://stackoverflow.com/questions/1441010/the-shortest-possible-output-from-git-log-containing-author-and-date#comment10995395_1441062
+        SUMMARY=`git log -n 1 --pretty=format:"%h %ad%x09%an%x09%s" --date=short`
+        # replace newlines and tabs with a space
+        SUMMARY=${SUMMARY//$'\n'/ }
+        SUMMARY=${SUMMARY//$'\t'/ }
+        # escape double quotes
+        SUMMARY=${SUMMARY//$'"'/\\\"}
+        # limit length to 2010
+        # documentation says 2048 for this field but in my testing it fails over 2010
+        # https://docs.aws.amazon.com/codepipeline/latest/APIReference/API_ArtifactRevision.html
+        SUMMARY=`echo $SUMMARY | cut -c 1-2010`
+        export SUMMARY
+        export AWS_S3_DROP_PATH_ZIP=aws-marketplace-oe-patterns-wordpress-default/$GITHUB_REF.zip
+        aws s3 cp $HOME/aws-marketplace-oe-patterns-wordpress-default.zip \
+        s3://ordinary-experts-aws-marketplace-wordpress-pattern-artifacts/$AWS_S3_DROP_PATH_ZIP \
+        --acl public-read --metadata "{\"codepipeline-artifact-revision-summary\":\"$SUMMARY\"}"

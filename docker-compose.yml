@@ -1,0 +1,29 @@
+version: '3.3'
+
+services:
+  db:
+    image: mysql:5.7
+    volumes:
+      - db_data:/var/lib/mysql
+    restart: always
+    environment:
+      - MYSQL_DATABASE=wordpress
+      - MYSQL_PASSWORD=wordpress
+      - MYSQL_ROOT_PASSWORD=somewordpress
+      - MYSQL_USER=wordpress
+  wordpress:
+    build: .
+    volumes:
+      - .:/var/www/app
+    environment:
+      - DB_HOST=db
+      - DB_NAME=wordpress
+      - DB_PASSWORD=wordpress
+      - DB_USER=wordpress
+      - WP_ENV=development
+      - WP_HOME=http://localhost:8080
+      - WP_SITEURL=http://localhost:8080/wp
+    ports:
+      - "8080:80"
+volumes:
+    db_data: {}
