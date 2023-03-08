@@ -2,7 +2,7 @@ FROM debian:buster-slim
 
 ENV IN_DOCKER=true
 
-ADD https://raw.githubusercontent.com/ordinaryexperts/aws-marketplace-oe-patterns-wordpress/develop/packer/setup.sh /tmp/setup.sh
+ADD https://raw.githubusercontent.com/ordinaryexperts/aws-marketplace-oe-patterns-wordpress/feature/cdk2/packer/setup.sh /tmp/setup.sh
 RUN bash /tmp/setup.sh
 RUN rm -f /tmp/setup.sh
 
