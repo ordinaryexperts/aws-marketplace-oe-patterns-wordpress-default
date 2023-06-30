@@ -1,5 +1,9 @@
 # Unreleased
 
+# 6.2.2
+
+* Upgrade bedrock/wordpress to 6.2.2
+
 # 6.1.1
 
 * Upgrade bedrock/wordpress to 6.1.1
